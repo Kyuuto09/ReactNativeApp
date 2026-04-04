@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   Pressable,
   SafeAreaView,
@@ -267,6 +268,11 @@ export default function Index() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
+      <LinearGradient
+        colors={["#F9FBFF", "#F0F4FB", "#EEF3F9"]}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
       <ScrollView contentContainerStyle={styles.container}>
         {!hasStarted ? (
           <View style={styles.centerContainer}>
@@ -350,12 +356,13 @@ export default function Index() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F5F5F7",
+    backgroundColor: "#EEF3F9",
   },
   container: {
     flexGrow: 1,
     paddingHorizontal: 18,
-    paddingVertical: 28,
+    paddingTop: 28,
+    paddingBottom: 110,
     justifyContent: "center",
   },
   centerContainer: {
