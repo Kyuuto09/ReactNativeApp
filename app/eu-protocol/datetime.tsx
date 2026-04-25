@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { 
+  Alert,
   Keyboard, 
   Pressable, 
   StyleSheet, 
@@ -11,13 +12,27 @@ import {
   View 
 } from "react-native";
 
+import { useProtocol } from "@/components/eu-protocol/ProtocolContext";
+import { maskDate, maskTime } from "@/components/eu-protocol/formatters";
+
 export default function EuProtocolDateTime() {
   const router = useRouter();
+  const { draftProtocol, updateDraft } = useProtocol();
 
-  const [date, setDate] = useState("18.04.2026");
-  const [time, setTime] = useState("11:50");
+  const [date, setDate] = useState(draftProtocol.date || "");
+  const [time, setTime] = useState(draftProtocol.time || "");
 
   const onNext = () => {
+    if (!date.trim() || !time.trim()) {
+      Alert.alert("Missing Information", "Please fill in both Date and Time to proceed.");
+      return;
+    }
+    if (date.length < 10) {
+      Alert.alert("Invalid Date", "Please enter a fully formatted date (DD.MM.YYYY).");
+      return;
+    }
+    
+    updateDraft({ date, time });
     router.push("/eu-protocol/participant-a");
   };
 
@@ -42,9 +57,11 @@ export default function EuProtocolDateTime() {
               <TextInput
                 style={styles.input}
                 value={date}
-                onChangeText={setDate}
+                onChangeText={(t) => setDate(maskDate(t))}
                 placeholder="DD.MM.YYYY"
+                placeholderTextColor="#9A9AA0"
                 keyboardType="numeric"
+                maxLength={10}
               />
             </View>
           </View>
@@ -61,9 +78,11 @@ export default function EuProtocolDateTime() {
               <TextInput
                 style={styles.input}
                 value={time}
-                onChangeText={setTime}
+                onChangeText={(t) => setTime(maskTime(t))}
                 placeholder="HH:MM"
+                placeholderTextColor="#9A9AA0"
                 keyboardType="numeric"
+                maxLength={5}
               />
             </View>
           </View>

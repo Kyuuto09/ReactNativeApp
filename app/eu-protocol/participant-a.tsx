@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { 
+  Alert,
   Keyboard, 
   KeyboardAvoidingView, 
   Platform, 
@@ -14,17 +15,30 @@ import {
   View 
 } from "react-native";
 
+import { useProtocol } from "@/components/eu-protocol/ProtocolContext";
+import { maskDate } from "@/components/eu-protocol/formatters";
+
 export default function ParticipantAScreen() {
   const router = useRouter();
+  const { draftProtocol, updateDraft } = useProtocol();
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [dob, setDob] = useState("");
-  const [phone, setPhone] = useState("");
-  const [licensePlate, setLicensePlate] = useState("");
+  const [firstName, setFirstName] = useState(draftProtocol.firstName || "");
+  const [lastName, setLastName] = useState(draftProtocol.lastName || "");
+  const [dob, setDob] = useState(draftProtocol.dob || "");
+  const [phone, setPhone] = useState(draftProtocol.phone || "");
+  const [licensePlate, setLicensePlate] = useState(draftProtocol.licensePlate || "");
 
   const onNext = () => {
-    alert("Step 4: Driver License Data — is currently under development!");
+    if (!firstName.trim() || !lastName.trim() || !dob.trim() || !phone.trim() || !licensePlate.trim()) {
+      Alert.alert("Missing Information", "Please complete all fields to continue.");
+      return;
+    }
+    if (dob.length < 10) {
+      Alert.alert("Invalid Date", "Please enter a fully formatted birth date (DD.MM.YYYY).");
+      return;
+    }
+    updateDraft({ firstName, lastName, dob, phone, licensePlate });
+    router.push("/eu-protocol/driver-license-a");
   };
 
   return (
@@ -60,8 +74,9 @@ export default function ParticipantAScreen() {
               icon="calendar-outline" 
               placeholder="DD.MM.YYYY" 
               value={dob} 
-              onChangeText={setDob} 
+              onChangeText={(t: string) => setDob(maskDate(t))} 
               keyboardType="numeric"
+              maxLength={10}
             />
             <InputField 
               label="Phone Number" 

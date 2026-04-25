@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // 10 Questions Array
 const questions = [
@@ -266,7 +266,7 @@ export default function Index() {
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
       <LinearGradient
         colors={["#F9FBFF", "#F0F4FB", "#EEF3F9"]}

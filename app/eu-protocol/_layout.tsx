@@ -1,8 +1,11 @@
 import { Stack } from "expo-router";
 
+import { ProtocolProvider } from "@/components/eu-protocol/ProtocolContext";
+
 export default function EuProtocolLayout() {
   return (
-    <Stack
+    <ProtocolProvider>
+      <Stack
       screenOptions={{
         headerShown: true,
         headerTintColor: "#111111",
@@ -31,6 +34,28 @@ export default function EuProtocolLayout() {
           headerBackTitle: " ",
         }} 
       />
+      <Stack.Screen 
+        name="driver-license-a" 
+        options={{ 
+          title: "Step 3 of 4",
+          headerBackTitle: " ",
+        }} 
+      />
+      <Stack.Screen 
+        name="damage-type" 
+        options={{ 
+          title: "Step 4 of 4",
+          headerBackTitle: " ",
+        }} 
+      />
+      <Stack.Screen 
+        name="view/[id]" 
+        options={{ 
+          title: "Protocol Record",
+          headerBackTitle: " ",
+        }} 
+      />
     </Stack>
+    </ProtocolProvider>
   );
 }

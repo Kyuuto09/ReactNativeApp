@@ -1,56 +1,25 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
-import { LiquidTabBar } from "@/components/LiquidTabBar";
+import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
+import React from "react";
 
 export default function RootLayout() {
   return (
-    <Tabs
-      initialRouteName="todos"
-      tabBar={(props) => <LiquidTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-        tabBarHideOnKeyboard: true,
-      }}
+    <NativeTabs
+      tintColor="#111111"
     >
-      <Tabs.Screen
-        name="eu-protocol"
-        options={{
-          title: "EU Protocol",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name={focused ? "planet" : "planet-outline"}
-              size={size}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="todos"
-        options={{
-          title: "To-do",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name={focused ? "checkmark-circle" : "checkmark-circle-outline"}
-              size={size}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Personality Test",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name={focused ? "sparkles" : "sparkles-outline"}
-              size={size}
-              color={color}
-            />
-          ),
-        }}
-      />
-    </Tabs>
+      <NativeTabs.Trigger name="eu-protocol">
+        <Label>EU Protocol</Label>
+        <Icon sf="globe" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="todos">
+        <Label>To-do</Label>
+        <Icon sf="checkmark.circle.fill" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="index">
+        <Label>Personality Test</Label>
+        <Icon sf="sparkles" />
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }

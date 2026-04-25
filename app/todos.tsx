@@ -3,11 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CreateTodoForm } from "@/components/todos/CreateTodoForm";
 import { TodoList } from "@/components/todos/TodoList";
@@ -74,7 +74,7 @@ export default function TodosScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <LinearGradient
         colors={["#F9FBFF", "#F0F4FB", "#EEF3F9"]}
         locations={[0, 0.45, 1]}
