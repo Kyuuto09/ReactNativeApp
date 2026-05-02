@@ -9,15 +9,20 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { CreateTodoForm } from "@/components/todos/CreateTodoForm";
 import { TodoList } from "@/components/todos/TodoList";
 import { fetchTodos } from "@/services/todos-api";
 import { Todo } from "@/types/todo";
 
+const TODOS_STORAGE_KEY = "@created_todos";
+
 export default function TodosScreen() {
   const [apiTodos, setApiTodos] = useState<Todo[]>([]);
   const [createdTodos, setCreatedTodos] = useState<Todo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const todos = useMemo(
@@ -34,6 +39,15 @@ export default function TodosScreen() {
     try {
       setIsLoading(true);
       setError(null);
+
+      // Load locally created tasks first
+      const storedTodos = await AsyncStorage.getItem(TODOS_STORAGE_KEY);
+      if (storedTodos) {
+        setCreatedTodos(JSON.parse(storedTodos));
+      }
+      setIsStorageLoaded(true);
+
+      // Fetch dummy API tasks
       const nextTodos = await fetchTodos();
       setApiTodos(nextTodos);
     } catch {
@@ -72,6 +86,15 @@ export default function TodosScreen() {
   useEffect(() => {
     void loadTodos();
   }, []);
+
+  // Automatic Save: Async Storage
+  useEffect(() => {
+    if (isStorageLoaded) {
+      AsyncStorage.setItem(TODOS_STORAGE_KEY, JSON.stringify(createdTodos)).catch(
+        (err) => console.error("Failed to save todos to storage", err),
+      );
+    }
+  }, [createdTodos, isStorageLoaded]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
