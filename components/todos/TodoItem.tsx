@@ -10,6 +10,15 @@ type TodoItemProps = {
 export function TodoItem({ item, onToggle }: TodoItemProps) {
   const statusLabel = item.completed ? "done" : "to-do";
   const details = [statusLabel];
+  const priorityColor =
+    item.priority === "low"
+      ? "#34C759"
+      : item.priority === "medium"
+        ? "#FF9F0A"
+        : item.priority === "high"
+          ? "#FF3B30"
+          : "#8E8E93";
+  const statusColor = item.completed ? "#C7C7CC" : priorityColor;
 
   if (item.priority) {
     details.push(`priority: ${item.priority}`);
@@ -29,20 +38,26 @@ export function TodoItem({ item, onToggle }: TodoItemProps) {
       onPress={onToggle}
     >
       <View style={styles.surfaceHighlight} />
-      <View style={[styles.rowContent, item.completed && styles.rowContentDone]}>
-        <View
-          style={[
-            styles.statusDot,
-            item.completed ? styles.statusDone : styles.statusPending,
-          ]}
-        />
+      <View
+        style={[styles.rowContent, item.completed && styles.rowContentDone]}
+      >
+        <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
         <View style={styles.contentWrap}>
           <Text style={[styles.title, item.completed && styles.titleDone]}>
             {item.todo}
           </Text>
-          <Text style={[styles.meta, item.completed && styles.metaDone]}>
-            {details.join(" • ")}
-          </Text>
+          <View style={styles.metaRow}>
+            <Text style={[styles.meta, item.completed && styles.metaDone]}>
+              {details.join(" • ")}
+            </Text>
+            {item.priority ? (
+              <View
+                style={[styles.priorityPill, { backgroundColor: statusColor }]}
+              >
+                <Text style={styles.priorityText}>{item.priority}</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
       </View>
     </Pressable>
@@ -85,12 +100,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     marginTop: 7,
   },
-  statusDone: {
-    backgroundColor: "#34C759",
-  },
-  statusPending: {
-    backgroundColor: "#FF9500",
-  },
   contentWrap: {
     flex: 1,
   },
@@ -112,5 +121,23 @@ const styles = StyleSheet.create({
   },
   metaDone: {
     color: "#C7C7CC",
+  },
+  metaRow: {
+    marginTop: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  priorityPill: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  priorityText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textTransform: "uppercase",
   },
 });

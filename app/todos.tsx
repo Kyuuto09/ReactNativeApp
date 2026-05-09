@@ -9,26 +9,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
 import { CreateTodoForm } from "@/components/todos/CreateTodoForm";
 import { TodoList } from "@/components/todos/TodoList";
 import { fetchTodos } from "@/services/todos-api";
+import {
+  getTodosFromDb,
+  initTodosDb,
+  insertTodo,
+  toggleTodoInDb,
+  upsertTodos,
+} from "@/services/todos-db";
 import { Todo } from "@/types/todo";
 
-const TODOS_STORAGE_KEY = "@created_todos";
-
 export default function TodosScreen() {
-  const [apiTodos, setApiTodos] = useState<Todo[]>([]);
-  const [createdTodos, setCreatedTodos] = useState<Todo[]>([]);
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const todos = useMemo(
-    () => [...createdTodos, ...apiTodos],
-    [createdTodos, apiTodos],
-  );
 
   const completedCount = useMemo(
     () => todos.filter((item) => item.completed).length,
@@ -39,17 +35,16 @@ export default function TodosScreen() {
     try {
       setIsLoading(true);
       setError(null);
+      await initTodosDb();
 
-      // Load locally created tasks first
-      const storedTodos = await AsyncStorage.getItem(TODOS_STORAGE_KEY);
-      if (storedTodos) {
-        setCreatedTodos(JSON.parse(storedTodos));
+      const storedTodos = await getTodosFromDb();
+      if (storedTodos.length === 0) {
+        const apiTodos = await fetchTodos();
+        await upsertTodos(apiTodos, "api");
+        setTodos(apiTodos);
+      } else {
+        setTodos(storedTodos);
       }
-      setIsStorageLoaded(true);
-
-      // Fetch dummy API tasks
-      const nextTodos = await fetchTodos();
-      setApiTodos(nextTodos);
     } catch {
       setError("Failed to load tasks. Please try again.");
     } finally {
@@ -71,30 +66,24 @@ export default function TodosScreen() {
       userId: 0,
     };
 
-    setCreatedTodos((prev) => [newTodo, ...prev]);
+    setTodos((prev) => [newTodo, ...prev]);
+    insertTodo(newTodo).catch((err) =>
+      console.error("Failed to save todo to DB", err),
+    );
   };
 
   const handleToggleTodo = (id: number) => {
-    setCreatedTodos((prev) =>
+    setTodos((prev) =>
       prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
     );
-    setApiTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
+    toggleTodoInDb(id).catch((err) =>
+      console.error("Failed to toggle todo", err),
     );
   };
 
   useEffect(() => {
     void loadTodos();
   }, []);
-
-  // Automatic Save: Async Storage
-  useEffect(() => {
-    if (isStorageLoaded) {
-      AsyncStorage.setItem(TODOS_STORAGE_KEY, JSON.stringify(createdTodos)).catch(
-        (err) => console.error("Failed to save todos to storage", err),
-      );
-    }
-  }, [createdTodos, isStorageLoaded]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
