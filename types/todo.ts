@@ -7,6 +7,8 @@ export type Todo = {
   userId: number;
   priority?: TodoPriority;
   dueDate?: string;
+  reminderAt?: string | null;
+  notificationId?: string | null;
 };
 
 export type TodosResponse = {

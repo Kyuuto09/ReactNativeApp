@@ -1,7 +1,9 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  DeviceEventEmitter,
   Pressable,
   StyleSheet,
   Text,
@@ -13,12 +15,20 @@ import { CreateTodoForm } from "@/components/todos/CreateTodoForm";
 import { TodoList } from "@/components/todos/TodoList";
 import { fetchTodos } from "@/services/todos-api";
 import {
+  deleteTodoFromDb,
   getTodosFromDb,
+  hasSeededTodosDb,
   initTodosDb,
   insertTodo,
-  toggleTodoInDb,
+  markTodosDbSeeded,
+  updateTodoCompletionInDb,
   upsertTodos,
 } from "@/services/todos-db";
+import {
+  cancelTodoNotification,
+  isFutureReminder,
+  scheduleTodoNotification,
+} from "@/services/notifications-service";
 import { Todo } from "@/types/todo";
 
 export default function TodosScreen() {
@@ -31,7 +41,7 @@ export default function TodosScreen() {
     [todos],
   );
 
-  const loadTodos = async () => {
+  const loadTodos = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -39,9 +49,15 @@ export default function TodosScreen() {
 
       const storedTodos = await getTodosFromDb();
       if (storedTodos.length === 0) {
-        const apiTodos = await fetchTodos();
-        await upsertTodos(apiTodos, "api");
-        setTodos(apiTodos);
+        const hasSeededTodos = await hasSeededTodosDb();
+        if (hasSeededTodos) {
+          setTodos([]);
+        } else {
+          const apiTodos = await fetchTodos();
+          await upsertTodos(apiTodos, "api");
+          await markTodosDbSeeded();
+          setTodos(apiTodos);
+        }
       } else {
         setTodos(storedTodos);
       }
@@ -50,40 +66,125 @@ export default function TodosScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   const handleCreateTodo = (values: {
     title: string;
     dueDate: string;
+    dueTime: string;
     priority: "low" | "medium" | "high";
+    reminderAt: string;
   }) => {
     const newTodo: Todo = {
       id: Date.now(),
       todo: values.title,
       dueDate: values.dueDate,
+      reminderAt: values.reminderAt,
+      notificationId: null,
       priority: values.priority,
       completed: false,
       userId: 0,
     };
 
     setTodos((prev) => [newTodo, ...prev]);
-    insertTodo(newTodo).catch((err) =>
-      console.error("Failed to save todo to DB", err),
-    );
+    scheduleTodoNotification({
+      todoId: newTodo.id,
+      title: newTodo.todo,
+      reminderAt: newTodo.reminderAt,
+    })
+      .then((notificationId) => {
+        const todoWithNotification = { ...newTodo, notificationId };
+        setTodos((prev) =>
+          prev.map((todo) =>
+            todo.id === newTodo.id ? todoWithNotification : todo,
+          ),
+        );
+        return insertTodo(todoWithNotification);
+      })
+      .catch((err) => {
+        console.error("Failed to save todo reminder", err);
+        insertTodo(newTodo).catch((saveError) =>
+          console.error("Failed to save todo to DB", saveError),
+        );
+      });
   };
 
   const handleToggleTodo = (id: number) => {
+    const todo = todos.find((item) => item.id === id);
+    if (!todo) {
+      return;
+    }
+
+    const nextCompleted = !todo.completed;
+
     setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
+      prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              completed: nextCompleted,
+              notificationId: nextCompleted ? null : t.notificationId,
+            }
+          : t,
+      ),
     );
-    toggleTodoInDb(id).catch((err) =>
-      console.error("Failed to toggle todo", err),
-    );
+
+    const syncReminder = nextCompleted
+      ? cancelTodoNotification(todo.notificationId).then(() => null)
+      : isFutureReminder(todo.reminderAt)
+        ? scheduleTodoNotification({
+            todoId: todo.id,
+            title: todo.todo,
+            reminderAt: todo.reminderAt,
+          })
+        : Promise.resolve(null);
+
+    syncReminder
+      .then((notificationId) => {
+        setTodos((prev) =>
+          prev.map((t) =>
+            t.id === id ? { ...t, notificationId } : t,
+          ),
+        );
+        return updateTodoCompletionInDb(id, nextCompleted, notificationId);
+      })
+      .catch((err) => console.error("Failed to toggle todo", err));
   };
 
+  const deleteTodo = async (todo: Todo) => {
+    setTodos((prev) => prev.filter((item) => item.id !== todo.id));
+
+    try {
+      await cancelTodoNotification(todo.notificationId);
+      await deleteTodoFromDb(todo.id);
+    } catch (err) {
+      console.error("Failed to delete todo", err);
+      void loadTodos();
+    }
+  };
+
+  const handleDeleteTodo = (id: number) => {
+    const todo = todos.find((item) => item.id === id);
+    if (!todo) {
+      return;
+    }
+
+    void deleteTodo(todo);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadTodos();
+    }, [loadTodos]),
+  );
+
   useEffect(() => {
-    void loadTodos();
-  }, []);
+    const subscription = DeviceEventEmitter.addListener("todos:changed", () => {
+      void loadTodos();
+    });
+
+    return () => subscription.remove();
+  }, [loadTodos]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -124,6 +225,7 @@ export default function TodosScreen() {
           <TodoList
             todos={todos}
             onToggle={handleToggleTodo}
+            onDelete={handleDeleteTodo}
             headerComponent={<CreateTodoForm onCreate={handleCreateTodo} />}
           />
         )}

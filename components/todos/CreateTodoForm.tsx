@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { Controller, useForm } from "react-hook-form";
 import {
   Animated,
@@ -16,7 +19,9 @@ import { TodoPriority } from "@/types/todo";
 type CreateTodoFormValues = {
   title: string;
   dueDate: string;
+  dueTime: string;
   priority: TodoPriority;
+  reminderAt: string;
 };
 
 type CreateTodoFormProps = {
@@ -45,9 +50,54 @@ const formatDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const formatTime = (date: Date) => {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${hours}:${minutes}`;
+};
+
+const getDefaultReminderDate = () => {
+  const date = new Date();
+  date.setHours(date.getHours() + 1, 0, 0, 0);
+  return date;
+};
+
+const getDateFromValues = (date: string, time: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+    return null;
+  }
+
+  const [year, month, day] = date.split("-").map(Number);
+  const [hours, minutes] = time.split(":").map(Number);
+  const reminderDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+
+  if (
+    reminderDate.getFullYear() !== year ||
+    reminderDate.getMonth() !== month - 1 ||
+    reminderDate.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return reminderDate;
+};
+
+const maskDateInput = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  const year = digits.slice(0, 4);
+  const month = digits.slice(4, 6);
+  const day = digits.slice(6, 8);
+
+  return [year, month, day].filter(Boolean).join("-");
+};
+
 export function CreateTodoForm({ onCreate }: CreateTodoFormProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const defaultReminderDate = getDefaultReminderDate();
 
   useEffect(() => {
     if (
@@ -64,13 +114,19 @@ export function CreateTodoForm({ onCreate }: CreateTodoFormProps) {
     formState: { errors },
     reset,
     setValue,
+    watch,
   } = useForm<CreateTodoFormValues>({
     defaultValues: {
       title: "",
-      dueDate: formatDate(new Date()),
+      dueDate: formatDate(defaultReminderDate),
+      dueTime: formatTime(defaultReminderDate),
       priority: "medium",
+      reminderAt: defaultReminderDate.toISOString(),
     },
   });
+
+  const dueDate = watch("dueDate");
+  const dueTime = watch("dueTime");
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -85,17 +141,66 @@ export function CreateTodoForm({ onCreate }: CreateTodoFormProps) {
   };
 
   const submitForm = (values: CreateTodoFormValues) => {
+    const reminderDate = getDateFromValues(values.dueDate, values.dueTime);
+
+    if (!reminderDate) {
+      setFormError("Use a complete date and time for the reminder.");
+      return;
+    }
+
+    if (reminderDate.getTime() <= Date.now()) {
+      setFormError("Choose a reminder time in the future.");
+      return;
+    }
+
+    setFormError(null);
     onCreate({
       ...values,
       title: values.title.trim(),
+      reminderAt: reminderDate.toISOString(),
     });
 
+    const nextDefaultReminderDate = getDefaultReminderDate();
     reset({
       title: "",
-      dueDate: formatDate(new Date()),
+      dueDate: formatDate(nextDefaultReminderDate),
+      dueTime: formatTime(nextDefaultReminderDate),
       priority: "medium",
+      reminderAt: nextDefaultReminderDate.toISOString(),
     });
     setIsOpen(false);
+  };
+
+  const handleTimePickerChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    if (Platform.OS === "android") {
+      setIsTimePickerOpen(false);
+    }
+
+    if (event.type === "dismissed" || !selectedDate) {
+      return;
+    }
+
+    setFormError(null);
+    setValue("dueTime", formatTime(selectedDate), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  const openTimePicker = () => {
+    const currentReminderDate = getDateFromValues(dueDate, dueTime);
+
+    if (!currentReminderDate) {
+      setValue("dueTime", formatTime(new Date()), {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+
+    setIsTimePickerOpen((prev) => !prev);
   };
 
   return (
@@ -162,22 +267,31 @@ export function CreateTodoForm({ onCreate }: CreateTodoFormProps) {
             name="dueDate"
             rules={{
               required: "Date is required.",
+              pattern: {
+                value: /^\d{4}-\d{2}-\d{2}$/,
+                message: "Use YYYY-MM-DD.",
+              },
             }}
-            render={({ field: { value } }) => (
+            render={({ field: { onBlur, value } }) => (
               <View>
-                <Text style={styles.label}>Date</Text>
+                <Text style={styles.label}>Reminder Date</Text>
                 <TextInput
-                  style={[
-                    styles.input,
-                    { marginBottom: 10 },
-                    errors.dueDate && styles.inputError,
-                  ]}
                   value={value}
+                  onBlur={onBlur}
+                  onChangeText={(text) => {
+                    setFormError(null);
+                    setValue("dueDate", maskDateInput(text), {
+                      shouldValidate: true,
+                    });
+                  }}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor="#9A9AA0"
-                  onChangeText={(text) => {
-                    setValue("dueDate", text, { shouldValidate: true });
-                  }}
+                  keyboardType="number-pad"
+                  style={[
+                    styles.input,
+                    errors.dueDate && styles.inputError,
+                  ]}
+                  maxLength={10}
                 />
 
                 {errors.dueDate ? (
@@ -185,6 +299,57 @@ export function CreateTodoForm({ onCreate }: CreateTodoFormProps) {
                 ) : null}
               </View>
             )}
+          />
+
+          <Controller
+            control={control}
+            name="dueTime"
+            rules={{
+              required: "Time is required.",
+              pattern: {
+                value: /^([01]\d|2[0-3]):[0-5]\d$/,
+                message: "Use HH:MM.",
+              },
+            }}
+            render={({ field: { value } }) => {
+              const pickerValue = getDateFromValues(dueDate, value) ?? new Date();
+
+              return (
+              <View>
+                <Text style={styles.label}>Reminder Time</Text>
+                <Pressable
+                  onPress={openTimePicker}
+                  style={[
+                    styles.timeButton,
+                    errors.dueTime && styles.inputError,
+                  ]}
+                >
+                  <Text style={styles.timeValue}>{value}</Text>
+                  <Text style={styles.timeHint}>
+                    {isTimePickerOpen ? "Done" : "Change"}
+                  </Text>
+                </Pressable>
+
+                {isTimePickerOpen ? (
+                  <View style={styles.timePickerShell}>
+                    <DateTimePicker
+                      value={pickerValue}
+                      mode="time"
+                      display={Platform.OS === "ios" ? "spinner" : "default"}
+                      themeVariant="light"
+                      textColor={palette.textPrimary}
+                      accentColor={palette.accent}
+                      onChange={handleTimePickerChange}
+                    />
+                  </View>
+                ) : null}
+
+                {errors.dueTime ? (
+                  <Text style={styles.errorText}>{errors.dueTime.message}</Text>
+                ) : null}
+              </View>
+              );
+            }}
           />
 
           <Controller
@@ -231,6 +396,8 @@ export function CreateTodoForm({ onCreate }: CreateTodoFormProps) {
             )}
           />
 
+          {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+
           <Pressable
             onPress={handleSubmit(submitForm)}
             style={({ pressed }) => [
@@ -242,7 +409,7 @@ export function CreateTodoForm({ onCreate }: CreateTodoFormProps) {
           </Pressable>
 
           <Text style={styles.helperText}>
-            New tasks are created with status: to-do
+            A reminder notification will be scheduled for the selected time.
           </Text>
         </Animated.View>
       ) : null}
@@ -304,6 +471,37 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: palette.danger,
+  },
+  timeButton: {
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: palette.borderStrong,
+    backgroundColor: palette.surfaceSoft,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  timeValue: {
+    color: palette.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  timeHint: {
+    color: palette.textMuted,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  timePickerShell: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: palette.border,
+    marginTop: -2,
+    marginBottom: 12,
+    overflow: "hidden",
   },
   errorText: {
     marginTop: -4,

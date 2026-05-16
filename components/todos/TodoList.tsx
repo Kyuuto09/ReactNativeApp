@@ -8,10 +8,16 @@ import { TodoItem } from "./TodoItem";
 type TodoListProps = {
   todos: Todo[];
   onToggle?: (id: number) => void;
+  onDelete?: (id: number) => void;
   headerComponent?: ReactElement | null;
 };
 
-export function TodoList({ todos, onToggle, headerComponent }: TodoListProps) {
+export function TodoList({
+  todos,
+  onToggle,
+  onDelete,
+  headerComponent,
+}: TodoListProps) {
   return (
     <FlatList
       data={todos}
@@ -21,7 +27,11 @@ export function TodoList({ todos, onToggle, headerComponent }: TodoListProps) {
       ListHeaderComponentStyle={headerComponent ? styles.header : undefined}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
       renderItem={({ item }) => (
-        <TodoItem item={item} onToggle={() => onToggle?.(item.id)} />
+        <TodoItem
+          item={item}
+          onToggle={() => onToggle?.(item.id)}
+          onDelete={() => onDelete?.(item.id)}
+        />
       )}
       ListEmptyComponent={
         <View style={styles.emptyWrap}>

@@ -1,13 +1,34 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
 
 import { Todo } from "@/types/todo";
 
 type TodoItemProps = {
   item: Todo;
   onToggle?: () => void;
+  onDelete?: () => void;
 };
 
-export function TodoItem({ item, onToggle }: TodoItemProps) {
+const formatReminder = (reminderAt: string) => {
+  const date = new Date(reminderAt);
+
+  if (!Number.isFinite(date.getTime())) {
+    return null;
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+};
+
+const ACTION_WIDTH = 76;
+
+export function TodoItem({ item, onToggle, onDelete }: TodoItemProps) {
   const statusLabel = item.completed ? "done" : "to-do";
   const details = [statusLabel];
   const priorityColor =
@@ -24,7 +45,12 @@ export function TodoItem({ item, onToggle }: TodoItemProps) {
     details.push(`priority: ${item.priority}`);
   }
 
-  if (item.dueDate) {
+  if (item.reminderAt) {
+    const reminderLabel = formatReminder(item.reminderAt);
+    if (reminderLabel) {
+      details.push(`reminder: ${reminderLabel}`);
+    }
+  } else if (item.dueDate) {
     details.push(`date: ${item.dueDate}`);
   }
 
@@ -32,47 +58,81 @@ export function TodoItem({ item, onToggle }: TodoItemProps) {
     details.push(`user #${item.userId}`);
   }
 
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-      onPress={onToggle}
-    >
-      <View style={styles.surfaceHighlight} />
-      <View
-        style={[styles.rowContent, item.completed && styles.rowContentDone]}
+  const renderRightActions = () => (
+    <View style={styles.actionWrap}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Delete ${item.todo}`}
+        onPress={onDelete}
+        style={({ pressed }) => [
+          styles.swipeAction,
+          pressed && styles.swipeActionPressed,
+        ]}
       >
-        <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-        <View style={styles.contentWrap}>
-          <Text style={[styles.title, item.completed && styles.titleDone]}>
-            {item.todo}
-          </Text>
-          <View style={styles.metaRow}>
-            <Text style={[styles.meta, item.completed && styles.metaDone]}>
-              {details.join(" • ")}
-            </Text>
-            {item.priority ? (
-              <View
-                style={[styles.priorityPill, { backgroundColor: statusColor }]}
-              >
-                <Text style={styles.priorityText}>{item.priority}</Text>
+        <Ionicons name="trash-outline" size={22} color="#FFFFFF" />
+      </Pressable>
+    </View>
+  );
+
+  return (
+    <Swipeable
+      friction={2}
+      overshootRight={false}
+      rightThreshold={36}
+      renderRightActions={renderRightActions}
+      containerStyle={styles.swipeContainer}
+    >
+      <View style={styles.card}>
+        <View style={styles.surfaceHighlight} />
+        <View
+          style={[styles.rowContent, item.completed && styles.rowContentDone]}
+        >
+          <Pressable
+            style={({ pressed }) => [
+              styles.toggleArea,
+              pressed && styles.cardPressed,
+            ]}
+            onPress={onToggle}
+          >
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <View style={styles.contentWrap}>
+              <Text style={[styles.title, item.completed && styles.titleDone]}>
+                {item.todo}
+              </Text>
+              <View style={styles.metaRow}>
+                <Text style={[styles.meta, item.completed && styles.metaDone]}>
+                  {details.join(" • ")}
+                </Text>
+                {item.priority ? (
+                  <View
+                    style={[
+                      styles.priorityPill,
+                      { backgroundColor: statusColor },
+                    ]}
+                  >
+                    <Text style={styles.priorityText}>{item.priority}</Text>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
-          </View>
+            </View>
+          </Pressable>
         </View>
       </View>
-    </Pressable>
+    </Swipeable>
   );
 }
 
 const styles = StyleSheet.create({
+  swipeContainer: {
+    borderRadius: 16,
+    backgroundColor: "transparent",
+  },
   card: {
     position: "relative",
-    backgroundColor: "rgba(255,255,255,0.34)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.82)",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderColor: "#FFFFFF",
     overflow: "hidden",
   },
   cardPressed: {
@@ -87,6 +147,14 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.24)",
   },
   rowContent: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  toggleArea: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
@@ -139,5 +207,22 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
     textTransform: "uppercase",
+  },
+  actionWrap: {
+    width: ACTION_WIDTH + 18,
+    marginLeft: -18,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#FF3B30",
+  },
+  swipeAction: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FF3B30",
+  },
+  swipeActionPressed: {
+    opacity: 0.72,
   },
 });
