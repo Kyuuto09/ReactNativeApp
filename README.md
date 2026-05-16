@@ -1,8 +1,24 @@
-# Welcome to your Expo app 👋
+<p align="center">
+   <img src="assets/images/icon.png" alt="Expo App Icon" width="96" height="96" style="border-radius: 18px;" />
+</p>
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+<h1 align="center">ReactNativeApp</h1>
 
-## Get started
+<p align="center">A learning-focused React Native project built with Expo. This repo is for exploring core React Native concepts, Expo tooling, and file-based routing with real screens and components.</p>
+
+## Why this project exists
+
+This is for learning React Native: building screens, wiring data, organizing components, and getting comfortable with the Expo workflow. It is intentionally hands-on and structured to grow as new lessons and experiments are added.
+
+## What you will find
+
+- `app/`: Main app routes and screens (Expo Router)
+- `components/`: Shared UI and feature components
+- `services/`: App services (data, notifications, APIs)
+- `types/`: Shared TypeScript types
+- `app-example/`: The original starter template, kept for reference
+
+## Run the app
 
 1. Install dependencies
 
@@ -10,41 +26,36 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Start the development server
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+In the output, choose how to open the app:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- Development build
+- Android emulator
+- iOS simulator
+- Expo Go
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Reset to a blank app
 
 ```bash
 npm run reset-project
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Moves the starter code to `app-example/` and creates a clean `app/` directory for fresh experiments.
 
-## Learn more
+## Learning goals
 
-To learn more about developing your project with Expo, look at the following resources:
+- Build real screens with Expo Router
+- Practice component composition and state
+- Experiment with services and simple data flows
+- Keep TypeScript types tidy and reusable
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Helpful resources
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- [Expo documentation](https://docs.expo.dev/)
+- [Expo Router](https://docs.expo.dev/router/introduction/)
+- [React Native docs](https://reactnative.dev/docs/getting-started)
