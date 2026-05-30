@@ -80,6 +80,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NativeTabs tintColor="#111111">
+        <NativeTabs.Trigger name="animations">
+          <Label>Animations</Label>
+          <Icon sf="wand.and.stars" />
+        </NativeTabs.Trigger>
+
         <NativeTabs.Trigger name="eu-protocol">
           <Label>EU Protocol</Label>
           <Icon sf="globe" />
